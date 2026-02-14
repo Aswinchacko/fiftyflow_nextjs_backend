@@ -1,0 +1,205 @@
+================================================================================
+KHARCHA EXPENSE TRACKER - BACKEND BUILD SPECIFICATION
+================================================================================
+Use this document to build the backend via prompts. The frontend (React/Vite)
+is a mobile-first expense tracker for India with 50/30/20 budgeting.
+
+================================================================================
+1. TECH STACK RECOMMENDATION
+================================================================================
+- Node.js + Express (or Fastify)
+- Database: PostgreSQL or MongoDB
+- Auth: JWT (access + refresh tokens) or session-based
+- Validation: Joi or Zod
+- Optional: Redis for sessions/caching
+
+================================================================================
+2. DATA MODELS
+================================================================================
+
+--- User ---
+{
+  id: string (UUID),
+  name: string,
+  email: string (unique),
+  passwordHash: string,
+  createdAt: ISO8601,
+  updatedAt: ISO8601
+}
+
+--- Transaction ---
+{
+  id: string (UUID),
+  userId: string (FK -> User.id),
+  name: string,
+  type: "received" | "paid",
+  amount: number (positive = income, negative = expense),
+  date: ISO8601,
+  icon: string (optional, e.g. "dollar", "wallet", "shopping", "user"),
+  category: "needs" | "wants" | "savings" | null (null for income/transfer)
+}
+
+--- UserBudget (per-user settings) ---
+{
+  userId: string (FK -> User.id),
+  monthlyBudget: number,
+  budgetRule: {
+    needs: number,  // 0-100, default 50
+    wants: number,  // 0-100, default 30
+    savings: number // 0-100, default 20
+  },
+  updatedAt: ISO8601
+}
+Note: budgetRule percentages must sum to 100.
+
+================================================================================
+3. API ENDPOINTS
+================================================================================
+
+--- AUTH ---
+POST   /api/auth/register
+  Body: { name, email, password }
+  Response: { user: { id, name, email }, accessToken, refreshToken }
+  Validation: name 2-100 chars, email valid, password min 6 chars
+
+POST   /api/auth/login
+  Body: { email, password }
+  Response: { user: { id, name, email }, accessToken, refreshToken }
+  Error: 401 invalid credentials
+
+POST   /api/auth/refresh
+  Body: { refreshToken }
+  Response: { accessToken }
+
+POST   /api/auth/logout
+  Headers: Authorization: Bearer <token>
+  Response: 204
+
+GET    /api/auth/me
+  Headers: Authorization: Bearer <token>
+  Response: { id, name, email }
+
+--- TRANSACTIONS ---
+GET    /api/transactions
+  Headers: Authorization
+  Query: ?search=string (optional, filter by name)
+  Response: { transactions: Transaction[] }
+  Sorted by date descending (newest first)
+
+POST   /api/transactions
+  Headers: Authorization
+  Body: { name, type, amount, date?, icon?, category? }
+  date: ISO8601, default = now
+  category: required if type="paid"
+  Response: { transaction: Transaction }
+
+PUT    /api/transactions/:id
+  Headers: Authorization
+  Body: { name?, type?, amount?, date?, icon?, category? } (partial)
+  Response: { transaction: Transaction }
+  Auth: must own transaction
+
+DELETE /api/transactions/:id
+  Headers: Authorization
+  Response: 204
+  Auth: must own transaction
+
+--- BUDGET ---
+GET    /api/budget
+  Headers: Authorization
+  Response: { monthlyBudget, budgetRule }
+
+PUT    /api/budget
+  Headers: Authorization
+  Body: { monthlyBudget?, budgetRule? } (partial)
+  budgetRule: { needs, wants, savings } must sum to 100
+  Response: { monthlyBudget, budgetRule }
+
+--- DERIVED / COMPUTED (optional - can be computed on frontend) ---
+GET    /api/summary
+  Headers: Authorization
+  Response: {
+    balance: number,
+    dailyChange: number (income today),
+    monthSpending: { needs, wants, savings },
+    budgetLimits: { needs, wants, savings }
+  }
+
+================================================================================
+4. SERVICES THE BACKEND NEEDS
+================================================================================
+
+1. AUTH SERVICE
+   - Hash passwords (bcrypt, argon2)
+   - Generate JWT access token (short expiry, e.g. 15min)
+   - Generate JWT refresh token (long expiry, e.g. 7 days)
+   - Verify token middleware for protected routes
+
+2. USER SERVICE
+   - Create user (register)
+   - Find user by email
+   - Find user by id
+
+3. TRANSACTION SERVICE
+   - CRUD for transactions
+   - Filter by userId (all queries scoped to authenticated user)
+   - Search by name (case-insensitive, partial match)
+   - Optional: pagination for GET /transactions
+
+4. BUDGET SERVICE
+   - Get/update user budget settings
+   - Default budgetRule { needs: 50, wants: 30, savings: 20 } for new users
+
+5. DATABASE
+   - Migrations for schema
+   - Indexes: userId on transactions, email unique on users
+
+================================================================================
+5. ERROR RESPONSES
+================================================================================
+Use consistent format:
+{ error: string, code?: string }
+
+- 400 Bad Request: validation errors
+- 401 Unauthorized: missing/invalid token
+- 403 Forbidden: owns resource check failed
+- 404 Not Found: resource doesn't exist
+- 409 Conflict: email already registered
+- 500 Internal Server Error
+
+================================================================================
+6. CORS
+================================================================================
+Allow frontend origin (e.g. http://localhost:5173 for Vite dev, production URL)
+
+================================================================================
+7. FRONTEND INTEGRATION NOTES
+================================================================================
+- Frontend uses localStorage for auth/data today; replace with API calls
+- AuthContext: login/register -> POST /api/auth/*, store tokens
+- DataContext: transactions from GET /api/transactions, add via POST
+- Budget: GET/PUT /api/budget
+- All requests need: Authorization: Bearer <accessToken>
+- On 401: try refresh token, then redirect to /login
+
+================================================================================
+8. ENVIRONMENT VARIABLES
+================================================================================
+DATABASE_URL=postgresql://... or mongodb://...
+JWT_ACCESS_SECRET=...
+JWT_REFRESH_SECRET=...
+JWT_ACCESS_EXPIRY=15m
+JWT_REFRESH_EXPIRY=7d
+PORT=3000
+NODE_ENV=development|production
+
+================================================================================
+9. SECURITY CHECKLIST
+================================================================================
+- Never return passwordHash
+- Rate limit auth endpoints (e.g. 5 attempts/min)
+- HTTPS in production
+- Sanitize inputs
+- Validate userId on all transaction/budget operations
+
+================================================================================
