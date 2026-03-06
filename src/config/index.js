@@ -10,10 +10,21 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
 });
 
-const parsed = envSchema.safeParse(process.env);
-if (!parsed.success) {
-  console.error('Invalid env:', parsed.error.flatten());
-  throw new Error('Invalid environment configuration');
+let _config;
+function getConfig() {
+  if (!_config) {
+    const parsed = envSchema.safeParse(process.env);
+    if (!parsed.success) {
+      console.error('Invalid env:', parsed.error.flatten());
+      throw new Error('Invalid environment configuration');
+    }
+    _config = parsed.data;
+  }
+  return _config;
 }
 
-export const config = parsed.data;
+export const config = new Proxy({}, {
+  get(_, prop) {
+    return getConfig()[prop];
+  },
+});
