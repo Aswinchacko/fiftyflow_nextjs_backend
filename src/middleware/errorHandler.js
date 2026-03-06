@@ -1,12 +1,12 @@
 import { config } from '../config/index.js';
 import { errors } from '../lib/messages.js';
 
-export function errorHandler(err, _req, res, _next) {
+export function handleError(err) {
   if (err.code === 'P2002') {
-    return res.status(409).json({ error: errors.EMAIL_EXISTS, code: 'EMAIL_EXISTS' });
+    return { status: 409, body: { error: errors.EMAIL_EXISTS, code: 'EMAIL_EXISTS' } };
   }
   if (err.code === 'P2025') {
-    return res.status(404).json({ error: errors.NOT_FOUND, code: 'NOT_FOUND' });
+    return { status: 404, body: { error: errors.NOT_FOUND, code: 'NOT_FOUND' } };
   }
 
   const status = err.status || err.statusCode || 500;
@@ -17,5 +17,5 @@ export function errorHandler(err, _req, res, _next) {
     console.error(err);
   }
 
-  res.status(status).json({ error: message, ...(code && { code }) });
+  return { status, body: { error: message, ...(code && { code }) } };
 }

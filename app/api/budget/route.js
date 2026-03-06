@@ -1,0 +1,43 @@
+import { NextResponse } from 'next/server';
+import * as budgetService from '@/services/budgetService.js';
+import { getUserIdFromRequest } from '@/middleware/auth.js';
+import { validateBody } from '@/middleware/validate.js';
+import { updateBudgetSchema } from '@/validators/budget.js';
+import { handleError } from '@/middleware/errorHandler.js';
+import { errors } from '@/lib/messages.js';
+
+export async function GET(request) {
+  const { userId, error: authErr } = getUserIdFromRequest(request);
+  if (authErr) return NextResponse.json(authErr.body, { status: authErr.status });
+
+  try {
+    const result = await budgetService.getBudget(userId);
+    return NextResponse.json(result);
+  } catch (err) {
+    const { status, body: errBody } = handleError(err);
+    return NextResponse.json(errBody, { status });
+  }
+}
+
+export async function PUT(request) {
+  const { userId, error: authErr } = getUserIdFromRequest(request);
+  if (authErr) return NextResponse.json(authErr.body, { status: authErr.status });
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: errors.VALIDATION_FAILED, code: 'VALIDATION_ERROR' }, { status: 400 });
+  }
+
+  const { validated, error: valErr } = validateBody(updateBudgetSchema, body);
+  if (valErr) return NextResponse.json(valErr.body, { status: valErr.status });
+
+  try {
+    const result = await budgetService.updateBudget(userId, validated);
+    return NextResponse.json(result);
+  } catch (err) {
+    const { status, body: errBody } = handleError(err);
+    return NextResponse.json(errBody, { status });
+  }
+}
