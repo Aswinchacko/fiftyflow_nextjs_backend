@@ -1,1 +1,1 @@
-{"version":1,"functions":{}}
+{"version":1,"functions":{"/api/auth/logout":{},"/api/auth/refresh":{},"/api/auth/login":{},"/api/auth/me":{},"/api/budget":{},"/api/transactions":{},"/api/transactions/[id]":{},"/api/auth/register":{},"/api/summary":{}}}

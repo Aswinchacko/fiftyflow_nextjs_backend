@@ -3,8 +3,9 @@ import * as authService from '@/services/authService.js';
 import { validateBody } from '@/middleware/validate.js';
 import { refreshSchema } from '@/validators/auth.js';
 import { errors } from '@/lib/messages.js';
+import { withCors } from '@/lib/cors.js';
 
-export async function POST(request) {
+async function handlePost(request) {
   let body;
   try {
     body = await request.json();
@@ -28,3 +29,5 @@ export async function POST(request) {
     return NextResponse.json({ error: errors.INVALID_TOKEN, code: 'UNAUTHORIZED' }, { status: 401 });
   }
 }
+
+export const POST = withCors(handlePost);

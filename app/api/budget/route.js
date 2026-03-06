@@ -5,8 +5,9 @@ import { validateBody } from '@/middleware/validate.js';
 import { updateBudgetSchema } from '@/validators/budget.js';
 import { handleError } from '@/middleware/errorHandler.js';
 import { errors } from '@/lib/messages.js';
+import { withCors } from '@/lib/cors.js';
 
-export async function GET(request) {
+async function handleGet(request) {
   const { userId, error: authErr } = getUserIdFromRequest(request);
   if (authErr) return NextResponse.json(authErr.body, { status: authErr.status });
 
@@ -19,7 +20,7 @@ export async function GET(request) {
   }
 }
 
-export async function PUT(request) {
+async function handlePut(request) {
   const { userId, error: authErr } = getUserIdFromRequest(request);
   if (authErr) return NextResponse.json(authErr.body, { status: authErr.status });
 
@@ -41,3 +42,6 @@ export async function PUT(request) {
     return NextResponse.json(errBody, { status });
   }
 }
+
+export const GET = withCors(handleGet);
+export const PUT = withCors(handlePut);

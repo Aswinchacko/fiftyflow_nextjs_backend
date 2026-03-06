@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import * as authService from '@/services/authService.js';
 import { getUserIdFromRequest } from '@/middleware/auth.js';
 import { handleError } from '@/middleware/errorHandler.js';
+import { withCors } from '@/lib/cors.js';
 
-export async function POST(request) {
+async function handlePost(request) {
   const { userId, error: authErr } = getUserIdFromRequest(request);
   if (authErr) return NextResponse.json(authErr.body, { status: authErr.status });
 
@@ -22,3 +23,5 @@ export async function POST(request) {
     return NextResponse.json(errBody, { status });
   }
 }
+
+export const POST = withCors(handlePost);

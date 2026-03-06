@@ -15,8 +15,9 @@ function getConfig() {
   if (!_config) {
     const parsed = envSchema.safeParse(process.env);
     if (!parsed.success) {
-      console.error('Invalid env:', parsed.error.flatten());
-      throw new Error('Invalid environment configuration');
+      const msg = parsed.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ');
+      console.error('Invalid env:', msg);
+      throw new Error(`Invalid environment configuration: ${msg}`);
     }
     _config = parsed.data;
   }

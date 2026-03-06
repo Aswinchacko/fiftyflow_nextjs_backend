@@ -6,8 +6,9 @@ import { registerSchema } from '@/validators/auth.js';
 import { errors } from '@/lib/messages.js';
 import { handleError } from '@/middleware/errorHandler.js';
 import { checkRateLimit } from '@/lib/rateLimit.js';
+import { withCors } from '@/lib/cors.js';
 
-export async function POST(request) {
+async function handlePost(request) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown';
   const { limited } = checkRateLimit(`auth:${ip}`);
   if (limited) {
@@ -45,3 +46,5 @@ export async function POST(request) {
     return NextResponse.json(errBody, { status });
   }
 }
+
+export const POST = withCors(handlePost);

@@ -5,8 +5,9 @@ import { getUserIdFromRequest } from '@/middleware/auth.js';
 import { validateBody } from '@/middleware/validate.js';
 import { updateTransactionSchema } from '@/validators/transaction.js';
 import { handleError } from '@/middleware/errorHandler.js';
+import { withCors } from '@/lib/cors.js';
 
-export async function PUT(request, context) {
+async function handlePut(request, context) {
   const { userId, error: authErr } = getUserIdFromRequest(request);
   if (authErr) return NextResponse.json(authErr.body, { status: authErr.status });
 
@@ -32,7 +33,7 @@ export async function PUT(request, context) {
   }
 }
 
-export async function DELETE(request, context) {
+async function handleDelete(request, context) {
   const { userId, error: authErr } = getUserIdFromRequest(request);
   if (authErr) return NextResponse.json(authErr.body, { status: authErr.status });
 
@@ -50,3 +51,6 @@ export async function DELETE(request, context) {
     return NextResponse.json(errBody, { status });
   }
 }
+
+export const PUT = withCors(handlePut);
+export const DELETE = withCors(handleDelete);
